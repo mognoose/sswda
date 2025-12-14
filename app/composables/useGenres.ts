@@ -17,7 +17,10 @@ interface SingaGenre {
 
 export const useGenres = () => {
   const fetchGenres = async (): Promise<SingaGenre[]> => {
-    const response = await fetch(SINGA_API_URL)
+    const response = await useAsyncData(async () => {
+      const res = await fetch(SINGA_API_URL)
+      return res.json()
+    })
     if (!response.ok) {
       throw new Error('Failed to fetch genres')
     }
