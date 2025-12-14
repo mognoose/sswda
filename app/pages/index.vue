@@ -20,7 +20,6 @@
         <router-link :to="`/genres/${genre.id}`">{{ genre.name }}</router-link>
       </div>
     </div>
-    <pre>data: {{genres}}</pre>
   </div>
 </template>
 
