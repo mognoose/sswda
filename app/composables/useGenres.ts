@@ -1,6 +1,9 @@
 import { useAsyncData } from '#app'
-const SINGA_API_URL = 'https://api.singa.com/v1.4/genres'
-const CACHE_EXPIRATION = 60 * 60 * 1000
+
+const isClient = () => typeof window !== 'undefined'
+
+const SINGA_API_URL = 'https://api.singa.com/v1.4/genres/'
+const CACHE_EXPIRATION = 60 * 60 * 1000 // 1 hour
 
 interface SingaGenre {
   id: number;
@@ -17,33 +20,49 @@ interface SingaGenre {
 
 export const useGenres = () => {
   const fetchGenres = async (): Promise<SingaGenre[]> => {
-    const response = await useAsyncData(async () => {
-      const res = await fetch(SINGA_API_URL)
-      return res.json()
-    })
-    if (!response.ok) {
-      throw new Error('Failed to fetch genres')
-    }
-    return response.json()
+    const response = await $fetch<{ results: SingaGenre[] }>(SINGA_API_URL);
+    return response.results;
   }
 
   const { data, pending, error, refresh } = useAsyncData<SingaGenre[]>(
     'genres',
     async () => {
-      const cachedData = localStorage.getItem('genres')
-      const cachedTimestamp = localStorage.getItem('genres_timestamp')
+      // localStorage is only available on the client
+      if (isClient()) {
+        const cachedData = localStorage.getItem('genres')
+        const cachedTimestamp = localStorage.getItem('genres_timestamp')
 
-      if (cachedData && cachedTimestamp) {
-        const isCacheValid =
-          Date.now() - parseInt(cachedTimestamp, 10) < CACHE_EXPIRATION
-        if (isCacheValid) {
-          return JSON.parse(cachedData)
+        if (cachedData && cachedTimestamp) {
+          const isCacheValid =
+            Date.now() - parseInt(cachedTimestamp, 10) < CACHE_EXPIRATION;
+          if (isCacheValid) {
+            try {
+              const parsed = JSON.parse(cachedData);
+              if (Array.isArray(parsed)) {
+                return parsed;
+              }
+            } catch (e) {
+              // cached data is corrupt, proceed to fetch
+            }
+          }
+          // cache is invalid or corrupt, remove it
+          localStorage.removeItem('genres');
+          localStorage.removeItem('genres_timestamp');
         }
       }
 
-      const genres = await fetchGenres()
-      localStorage.setItem('genres', JSON.stringify(genres))
-      localStorage.setItem('genres_timestamp', Date.now().toString())
+      const genres = await fetchGenres();
+      console.log(genres);
+      
+      // localStorage is only available on the client
+      if (isClient()) {
+        try {
+          localStorage.setItem('genres', JSON.stringify(genres))
+          localStorage.setItem('genres_timestamp', Date.now().toString())
+        } catch (e) {
+          console.error('Failed to save to localStorage', e);
+        }
+      }
       return genres
     }
   )

@@ -20,38 +20,30 @@
         <router-link :to="`/genres/${genre.id}`">{{ genre.name }}</router-link>
       </div>
     </div>
+    <pre>data: {{genres}}</pre>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, useGenres } from '#imports';
+import { ref, computed, useGenres } from '#imports';
 
 interface Genre {
   id: number;
   name: string;
 }
 
-const genres = ref<Genre[]>([]);
 const searchQuery = ref<string>('');
-const error = ref<string | null>(null);
+const { data: genres, error: fetchError } = useGenres<Genre[]>();
 
-const filteredGenres = computed(() =>
-  genres.value.filter((genre) =>
-    genre.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
-);
+const error = computed(() => (fetchError.value ? fetchError.value.message : null));
 
-onMounted(async () => {
-  try {
-    // Replace with your API call or data fetching logic
-    const response = useGenres();
-    if (response.error.value) {
-      throw new Error(response.error.value.message || 'Failed to fetch genres');
-    }
-    genres.value = response.data.value || [];
-  } catch (err) {
-    error.value = (err as Error).message;
+const filteredGenres = computed(() => {
+  if (!genres.value) {
+    return [];
   }
+  return genres.value.filter((genre) =>
+    genre.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
 });
 </script>
 
